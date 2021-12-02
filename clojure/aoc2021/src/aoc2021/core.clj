@@ -52,4 +52,40 @@
     )
   )
 
+(defn calculate-aims [instructions start]
+  (if (empty? instructions)
+    ()
+    (let [verb (ffirst instructions)
+          amount (second (first instructions))]
+      (let [new-aim (cond (= verb "down") (+ start amount)
+                          (= verb "up") (- start amount)
+                          :else start)]
+        (cons new-aim (calculate-aims (rest instructions) new-aim))
+        )
+      )
+    )
+  )
+
+(defn day2-part2 []
+  (with-open [rdr (io/reader "input/day2.txt")]
+    (let [raw (map #(str/split % #" ") (line-seq rdr))]
+      (let [parsed (map #(list (first %) (Integer/parseInt (second %))) raw)]
+        (let [aims (calculate-aims parsed 0)]
+          (let [deltas (map #(list (if (= (first %1) "forward") (second %1) 0) %2) parsed aims)]
+            (let [horizontal (reduce + (map #(first %) deltas))
+                  vertical (reduce + (map #(* (first %) (second %)) deltas))
+                  product (* horizontal vertical)]
+              (doall ((println "Day2, Part 2. Ending Position:" )
+                      (println "Horizontal = " horizontal)
+                      (println "Vertical = " vertical)
+                      (println "Product = " product)))
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+
+
 
