@@ -141,7 +141,7 @@
         select-by (if (= rating-reqd 0)
                     (if (>= num-ones num-vecs) 1 0)
                     (if (< num-ones num-vecs) 1 0))]
-    (filter #(= (get % idx) select-by))
+    (filter #(= (get % idx) select-by) bit-vectors)
     )
   )
 
@@ -152,7 +152,20 @@
       (if (> num-vectors 1)
         (recur (inc idx) (select-bits-based-on vectors idx 0))
         (bit-vector-integer-value (first vectors))
-        ))
+        )
+        )
+    )
+  )
+
+(defn find-co2-rating [bit-vectors]
+  (loop [idx 0
+         vectors bit-vectors]
+    (let [num-vectors (count vectors)]
+      (if (> num-vectors 1)
+        (recur (inc idx) (select-bits-based-on vectors idx 1))
+        (bit-vector-integer-value (first vectors))
+        )
+        )
     )
   )
 
