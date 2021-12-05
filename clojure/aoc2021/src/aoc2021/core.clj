@@ -87,5 +87,86 @@
     )
   )
 
+(def day3-test-data
+  '( "00100"  "11110"    "10110"    "10111"    "10101"
+     "01111"  "00111"    "11100"   "10000"    "11001"
+     "00010"  "01010"
+    )
+  )
 
+(defn bit-vector [bit-string]
+  (vec (map #(if (= % \1) 1 0) (map char (.getBytes bit-string)))))
 
+(defn vector-sum [v1 v2]
+  (vec (map #(+ %1 %2) v1 v2)))
+
+(defn bit-vector-complement [v1]
+  (vec (map #(if (= % 1) 0 1) v1)))
+
+(defn bit-vector-value-rec [sofar bits]
+  (if (empty? bits)
+    sofar
+    (bit-vector-value-rec (+ (* sofar 2) (first bits)) (rest bits))
+    ))
+
+(defn bit-vector-integer-value [v1]
+  (bit-vector-value-rec 0 v1))
+
+(defn day3-part1 []
+  (with-open [rdr (io/reader "input/day3.txt")]
+    (let [lines (line-seq rdr)
+          num-lines (/ (count lines) 2)]
+      (let [totals (->> lines
+                        (map bit-vector)
+                        (reduce vector-sum))]
+        (let [gamma-bits (map #(if (> % num-lines) 1 0) totals)
+              epsilon-bits (bit-vector-complement gamma-bits)
+              gamma (bit-vector-integer-value gamma-bits)
+              epsilon (bit-vector-integer-value epsilon-bits)]
+          (doall ((println "Day 3 Part 1.")
+                 (println "Gamma = " gamma)
+                 (println "Epsilon  = " epsilon)
+                 (println "Power = " (* gamma epsilon))))
+          )
+        )
+      )
+    )
+  )
+
+(defn select-bits-based-on
+  "Reduce bit vector set according to value of indexed bit, for appropriate rating (0 = O2, 1 = CO2)"
+  [bit-vectors idx rating-reqd]
+  (let [num-vecs (/ (count bit-vectors) 2)
+        num-ones (reduce + (map #(get % idx) bit-vectors))
+        select-by (if (= rating-reqd 0)
+                    (if (>= num-ones num-vecs) 1 0)
+                    (if (< num-ones num-vecs) 1 0))]
+    (filter #(= (get % idx) select-by))
+    )
+  )
+
+(defn find-o2-rating [bit-vectors]
+  (loop [idx 0
+         vectors bit-vectors]
+    (let [num-vectors (count vectors)]
+      (if (> num-vectors 1)
+        (recur (inc idx) (select-bits-based-on vectors idx 0))
+        (bit-vector-integer-value (first vectors))
+        ))
+    )
+  )
+
+(defn day3-part2 []
+  (with-open [rdr (io/reader "input/day3.txt")]
+    (let [bit-vectors (->> (line-seq rdr) (map bit-vector))]
+      (let [o2-rating (find-o2-rating bit-vectors)
+            co2-rating (find-co2-rating bit-vectors)
+            life-support-rating (* o2-rating co2-rating)]
+        (doall ((println "Day3 Part 2.")
+                (println "Oxygen rating = " o2-rating)
+                (println "CO2 rating = " co2-rating)
+                (println "Life support rating = " life-support-rating)))
+        )
+      )
+    )
+  )
