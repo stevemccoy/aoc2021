@@ -183,3 +183,70 @@
       )
     )
   )
+
+(defn myabs [v]
+  (if (< v 0) (* v -1) v))
+
+(defn day7-fuel-cost [positions fulcrum]
+  (reduce + (map #(myabs (- % fulcrum)) positions)))
+
+(defn minimise-fuel-cost-rec
+  "Iterate to close down the bounds around the minimum. bounds is ((pos cost) (pos cost)) for lower and upper bound."
+  [positions left-bound right-bound]
+  (let [left-pos (first left-bound)
+        left-cost (second left-bound)
+        right-pos (first right-bound)
+        right-cost (second right-bound)
+        width (- right-pos left-pos)]
+    (if (< width 2)
+      (let [ll-pos (dec left-pos)
+            rr-pos (inc right-pos)
+            ll-cost (day7-fuel-cost positions ll-pos)
+            rr-cost (day7-fuel-cost positions rr-pos)]
+        ((ll-pos ll-cost) (left-pos left-cost) (right-pos right-cost) (rr-pos rr-cost))
+        )
+      (let [mid-pos (/ (+ left-pos right-pos) 2)
+            mid-cost (day7-fuel-cost positions mid-pos)
+            max-cost (max left-cost mid-cost right-cost)
+            min-cost (min left-cost mid-cost right-cost)]
+        (if (= max-cost mid-cost)
+          (if (< left-cost right-cost)
+            (minimise-fuel-cost-rec positions left-bound '(mid-pos mid-cost))
+            (minimise-fuel-cost-rec positions '(mid-pos mid-cost) right-bound)
+            )
+          (if (> right-cost left-cost)
+            (minimise-fuel-cost-rec positions left-bound '(mid-pos mid-cost))
+            (minimise-fuel-cost-rec positions '(mid-pos mid-cost) right-bound)
+            )
+          )
+        )
+
+      )
+
+    )
+  )
+
+
+(defn minimise-fuel-cost
+  "Return (position cost) for minimum cost given the positions"
+  [positions]
+  (let [sorted-positions (sort positions)]
+    (let [left-pos (first sorted-positions)
+          right-pos (last sorted-positions)
+          left-cost (day7-fuel-cost positions left-pos)
+          right-cost (day7-fuel-cost positions right-pos)]
+
+      (minimise-fuel-cost-rec positions '(min-pos ))
+
+      ))
+
+  )
+
+
+(defn day7-part1 []
+  (with-open [rdr (io/reader "input/day7.txt")]
+    (let [positions (map #(Integer/parseInt %) (str/split (reduce conj (line-seq rdr)) #","))]
+      (println (day7-fuel-cost positions 10))
+      )
+    )
+)
