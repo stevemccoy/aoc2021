@@ -184,6 +184,32 @@
     )
   )
 
+(defn parse-int-list [string-list]
+  (map #(Integer/parseInt %) %))
+
+(defn point-list [from-x from-y to-x to-y]
+  (cond (= from-x to-x) (map #(into () %) (zipmap
+                                            (range (min from-y to-y) (inc (max from-y to-y)))
+                                            (repeat from-x)))
+        (= from-y to-y) (map #(into () %) (zipmap
+                                            (repeat from-y)
+                                            (range (min from-x to-x) (inc (max from-x to-x)))))
+        :else ()
+    )
+  )
+
+(defn day5-part1 []
+  (let [pattern #"(\d+),(\d+) -> (\d+),(\d+)"
+        lines (->> (str/split-lines (str/trim (slurp "input/test5.txt")))
+                   (map conj)
+                   (map #(rest (re-find (re-matcher pattern %))))
+                   (map parse-int-list)
+                   )]
+    ()
+    )
+  )
+
+
 (defn myabs [v]
   (if (< v 0) (* v -1) v))
 
@@ -260,3 +286,4 @@
       )
     )
   )
+
