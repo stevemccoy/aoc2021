@@ -240,6 +240,38 @@
              (println (count crossPoints))
              ))))
 
+(defn day6-one-step [state]
+    (apply merge-with +
+           (map #(if (> (first %) 0)
+                  { (dec (first %)) (second %) }
+                  { 8 (get state 0), 6 (get state 0) }) state))
+  )
+
+(defn day6-steps [state num-steps]
+  (if (<= num-steps 0)
+    state
+    (day6-steps (day6-one-step state) (dec num-steps)))
+  )
+
+(defn day6-simulation [input-file num-steps]
+  (let [start-state (-> (slurp input-file) (str/split #",") parse-int-list frequencies)
+        end-state (day6-steps start-state num-steps)]
+    (doall (println end-state)
+           (println (->> end-state (map second) (reduce +)))
+      )))
+
+(defn day6-part1 []
+  (doall ( (println "Advent of Code 2021.\nDay 6, Part 1.")
+           (println "Number of fish = ")
+           (day6-simulation "input/day6.txt" 80)
+           )))
+
+(defn day6-part2 []
+  (doall ( (println "Advent of Code 2021.\nDay 6, Part 2.")
+           (println "Number of fish = ")
+           (day6-simulation "input/day6.txt" 256)
+           )))
+
 (defn day7-part1-fuel-cost [positions fulcrum]
   (reduce + (map #(myabs (- % fulcrum)) positions)))
 
