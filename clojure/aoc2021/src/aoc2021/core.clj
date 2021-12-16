@@ -185,33 +185,60 @@
   )
 
 (defn parse-int-list [string-list]
-  (map #(Integer/parseInt %) %))
+  (->> string-list (map #(Integer/parseInt %))))
 
-(defn point-list [from-x from-y to-x to-y]
-  (cond (= from-x to-x) (map #(into () %) (zipmap
-                                            (range (min from-y to-y) (inc (max from-y to-y)))
-                                            (repeat from-x)))
-        (= from-y to-y) (map #(into () %) (zipmap
-                                            (repeat from-y)
-                                            (range (min from-x to-x) (inc (max from-x to-x)))))
-        :else ()
-    )
-  )
-
-(defn day5-part1 []
-  (let [pattern #"(\d+),(\d+) -> (\d+),(\d+)"
-        lines (->> (str/split-lines (str/trim (slurp "input/test5.txt")))
-                   (map conj)
-                   (map #(rest (re-find (re-matcher pattern %))))
-                   (map parse-int-list)
-                   )]
-    ()
-    )
-  )
-
+(defn mysgn-int [x]
+  (cond
+    (= x 0) 0
+    (< x 0) -1
+    :else 1 ))
 
 (defn myabs [v]
   (if (< v 0) (* v -1) v))
+
+(defn point-list [include-diagonals from-x from-y to-x to-y]
+  (cond
+    (= from-x to-x) (map #(into () %)
+                         (zipmap (range (min from-y to-y) (inc (max from-y to-y))) (repeat from-x)))
+    (= from-y to-y) (map #(reverse (into () %))
+                         (zipmap (range (min from-x to-x) (inc (max from-x to-x))) (repeat from-y)))
+    :else (if include-diagonals
+            (let [dx (mysgn-int (- to-x from-x))
+                  dy (mysgn-int (- to-y from-y))]
+              (map #(into () %) (zipmap (range from-y (+ to-y dy) dy) (range from-x (+ to-x dx) dx)))
+            )
+          )
+    ))
+
+(defn find-cross-points [input-file include-diagonals]
+  (let [pattern #"(\d+),(\d+) -> (\d+),(\d+)"
+        lines (->> (str/split-lines (str/trim (slurp input-file)))
+                   (map conj)
+                   (map #(rest (re-find (re-matcher pattern %))))
+                   (map parse-int-list) )]
+    (let [pathSets (map #(zipmap (apply point-list include-diagonals %) (repeat 1)) lines)
+          crossPoints (->> (apply merge-with + pathSets)
+                           (filter #(> (second %) 1)))]
+      crossPoints
+      )))
+
+(defn day5-part1 []
+  (let [crossPoints (find-cross-points "input/day5.txt" nil)]
+    (doall ( (println "Advent of Code 2021.\nDay 5, Part 1.")
+             (println "Crossing points:")
+             (println crossPoints)
+             (println "Count = ")
+             (println (count crossPoints))
+             ))))
+
+(defn day5-part2 []
+  (let [crossPoints (find-cross-points "input/day5.txt" 't)]
+    (doall ( (println "Advent of Code 2021.\nDay 5, Part 2.")
+             (println "Crossing points (including diagonal lines):")
+             (println crossPoints)
+             (println "Count = ")
+             (println (count crossPoints))
+             ))))
 
 (defn day7-part1-fuel-cost [positions fulcrum]
   (reduce + (map #(myabs (- % fulcrum)) positions)))
