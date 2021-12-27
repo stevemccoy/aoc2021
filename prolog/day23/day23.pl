@@ -2,7 +2,7 @@
 % Advent of Code 2021 - Day 23 - Amphipods
 %
 
-:- working_directory(_, 'C:/Users/stephen.mccoy/github/aoc2021/prolog/day23/').
+:- working_directory(_, 'C:/Users/Steve/github/aoc2021/prolog/day23/').
 
 :- dynamic connection/2.
 
@@ -141,7 +141,7 @@ no_strangers_home(State, Type) :-
     cost_lookup(CL1),
     zip_lists(State, CL1, ZL1),
     % Positions in state for the other types.
-    include(\=([_,Type/_]), ZL1, ZL2)
+    include(\=([_,Type/_]), ZL1, ZL2),
     % Do either home positions appear in remaining vector?
     not(member([H1,_], ZL2)),
     not(member([H2,_], ZL2)).
@@ -174,4 +174,43 @@ move(Before, Path, After, Cost) :-
     Cost is StepCost * NumSteps.
 
 % Definitions needed to use bestfirst algorithm.
+
+% Successor of N is M with a cost of M:
+s(N, M, C) :-
+    move(N, _, M, C).
+
+% goal(N) is as shown above.
+
+% (Admissible) heuristic function h(n) should be cost of restoring each amphipod to its home,
+% ignoring obstacles.
+
+
+path(Node, Node, [Node]).
+path(FirstNode, LastNode, [LastNode | Path]) :-
+	path(FirstNode, OneButLast, Path),
+	s(OneButLast, LastNode, _),
+	not(member(LastNode, Path)).
+
+% distance(A, B, Path, Distance)
+distance(A, B, Path, N) :-
+    path(A, B, Path),
+    length(Path, M),
+    N is M - 1.
+
+path_cost(A, B, Type, Cost) :-
+    distance(A, B, _, Dist),
+    cost_lookup(CL1),
+    member(Type/StepCost, CL1),
+    Cost is Dist * StepCost.
+
+h([A1loc, A2loc, B1loc, B2loc, C1loc, C2loc, D1loc, D2loc], Cost) :-
+    path_cost(A1loc, a1, a, A1Cost),
+    path_cost(A2loc, a1, a, A2Cost),
+    path_cost(B1loc, b1, b, B1Cost),
+    path_cost(B2loc, b1, b, B2Cost),
+    path_cost(C1loc, c1, c, C1Cost),
+    path_cost(C2loc, c1, c, C2Cost),
+    path_cost(D1loc, d1, d, D1Cost),
+    path_cost(D2loc, d1, d, D2Cost),
+    Cost is A1Cost + A2Cost + B1Cost + B2Cost + C1Cost + C2Cost + D1Cost + D2Cost.
 
