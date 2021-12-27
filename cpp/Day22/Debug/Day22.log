@@ -1,0 +1,3 @@
+﻿  Day22.cpp
+C:\Users\stephen.mccoy\github\aoc2021\cpp\Day22\Day22.cpp(77,10): warning C4101: 'str': unreferenced local variable
+  Day22.vcxproj -> C:\Users\stephen.mccoy\github\aoc2021\cpp\Day22\Debug\Day22.exe
