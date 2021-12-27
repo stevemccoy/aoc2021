@@ -2,7 +2,9 @@
 % Advent of Code 2021 - Day 23 - Amphipods
 %
 
-:- working_directory(_, 'C:/Users/Steve/github/aoc2021/prolog/day23/').
+:- working_directory(_, 'C:/Users/stephen.mccoy/github/aoc2021/prolog/day23/').
+
+[bestfirst].
 
 :- dynamic connection/2.
 
@@ -38,6 +40,8 @@ make_graph :-
     findall(Seq, connected_sequence(Seq), Sequences),
     writeln(Sequences), !,
     make_connections(Sequences).
+
+:- make_graph.
 
 % Bidirectional connections.
 bconn(A, B) :- connection(A, B).
@@ -184,16 +188,16 @@ s(N, M, C) :-
 % (Admissible) heuristic function h(n) should be cost of restoring each amphipod to its home,
 % ignoring obstacles.
 
-
 path(Node, Node, [Node]).
 path(FirstNode, LastNode, [LastNode | Path]) :-
 	path(FirstNode, OneButLast, Path),
-	s(OneButLast, LastNode, _),
+	bconn(OneButLast, LastNode),
 	not(member(LastNode, Path)).
 
 % distance(A, B, Path, Distance)
 distance(A, B, Path, N) :-
     path(A, B, Path),
+    !,
     length(Path, M),
     N is M - 1.
 
@@ -201,6 +205,7 @@ path_cost(A, B, Type, Cost) :-
     distance(A, B, _, Dist),
     cost_lookup(CL1),
     member(Type/StepCost, CL1),
+    !,
     Cost is Dist * StepCost.
 
 h([A1loc, A2loc, B1loc, B2loc, C1loc, C2loc, D1loc, D2loc], Cost) :-
