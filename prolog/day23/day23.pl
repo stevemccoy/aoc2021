@@ -2,9 +2,7 @@
 % Advent of Code 2021 - Day 23 - Amphipods
 %
 
-:- working_directory(_, 'C:/Users/stephen.mccoy/github/aoc2021/prolog/day23/').
-
-[bestfirst].
+:- working_directory(_, 'C:/Users/Steve/github/aoc2021/prolog/day23/').
 
 :- dynamic connection/2.
 
@@ -201,6 +199,7 @@ distance(A, B, Path, N) :-
     length(Path, M),
     N is M - 1.
 
+% Simple cost of moving from A to B as a Type, ignoring any obstacles.
 path_cost(A, B, Type, Cost) :-
     distance(A, B, _, Dist),
     cost_lookup(CL1),
@@ -219,3 +218,21 @@ h([A1loc, A2loc, B1loc, B2loc, C1loc, C2loc, D1loc, D2loc], Cost) :-
     path_cost(D2loc, d1, d, D2Cost),
     Cost is A1Cost + A2Cost + B1Cost + B2Cost + C1Cost + C2Cost + D1Cost + D2Cost.
 
+solution_cost([_], 0) :- !.
+solution_cost([A, B | Tail], Cost) :-
+    solution_cost([B | Tail], Before),
+    s(A, B, C1),
+    Cost is Before + C1.
+
+day23_part1 :-
+    writeln('Advent of Code 2021 - Day 23, Part 1'),
+    start_state(Start),
+    write('Starting from '),
+    writeln(Start),
+    writeln('...'),
+    bestfirst(Start, Solution),
+    writeln('Done. Solution is:'),
+    writeln(Solution),
+    solution_cost(Solution, MinCost),
+    write('Solution cost = '),
+    writeln(MinCost).

@@ -1,5 +1,7 @@
 % bestfirst.pl
 
+% Heuristic search, from an example by Bratko.
+
 % Assumptions:
 % * goal(N) determines if the node N is a goal node or not.
 % * Cost function is available for arcs in the state space, s(n1, n2) is the cost of moving from
@@ -29,7 +31,7 @@ expand(P, l(N, _), _, _, yes, [N | P]) :-
 % Generate successors and expand them within Bound.
 expand(P, l(N, F/G), Bound, Tree1, Solved, Solution) :-
 	F =< Bound,
-	(	bagof(M/C, (s(N, M, C), not member(M, P)), Successors),
+	(	bagof(M/C, (s(N, M, C), not(member(M, P))), Successors),
 		!,																% Node N has successors
 		succlist(G, Successors, Ts),									% Make subtrees Ts
 		bestf(Ts, F1),													% f-balue of best successor
@@ -61,14 +63,14 @@ expand(_, Tree, Bound, Tree, no, _) :-
 
 % continue(Path, Tree, Bound, NewTree, SubTreeSolved, TreeSolved, Solution)
 
-continue(_, _, _, _, yes, yes, Sol).
+continue(_, _, _, _, yes, yes, _).
 
-continue(P, t(N, F/G, [T1 | Ts]), Bound, Tree1, no, Solved, Sol) :-
+continue(P, t(N, _/G, [T1 | Ts]), Bound, Tree1, no, Solved, Sol) :-
 	insert(T1, Ts, NTs),
 	bestf(NTs, F1),
 	expand(P, t(N, F1/G, NTs), Bound, Tree1, Solved, Sol).
 
-continue(P, t(N, F/G, [_ | Ts]), Bound, Tree1, never, Solved, Sol) :-
+continue(P, t(N, _/G, [_ | Ts]), Bound, Tree1, never, Solved, Sol) :-
 	bestf(Ts, F1),
 	expand(P, t(N, F1/G, Ts), Bound, Tree1, Solved, Sol).
 
@@ -105,4 +107,4 @@ bestf([T | _], F) :-
 bestf([], 9999).		% No trees. Bad f-value.
 
 min(X, Y, X) :- X =< Y, !.
-min(X, Y, Y).
+min(_, Y, Y).
