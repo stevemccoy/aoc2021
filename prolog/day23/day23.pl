@@ -2,7 +2,7 @@
 % Advent of Code 2021 - Day 23 - Amphipods
 %
 
-:- working_directory(_, 'C:/Users/Steve/github/aoc2021/prolog/day23/').
+:- working_directory(_, 'C:/Users/stephen.mccoy/github/aoc2021/prolog/day23/').
 
 :- dynamic connection/2.
 
@@ -66,7 +66,6 @@ goal([A1, A2, B1, B2, C1, C2, D1, D2]) :-
     home_for(c, CL), member(C1, CL), member(C2, CL),
     home_for(d, DL), member(D1, DL), member(D2, DL).
 
-%
 % Move is a sequence of locations that an amphipod can occupy, between its start in one state
 % and finish in another state.
 % 
@@ -98,38 +97,41 @@ set_item(N, [Head | Tail], Item, [Head | Tail2]) :-
 	M is N - 1,
 	set_item(M, Tail, Item, Tail2).
 
+in_hallway(H) :- 
+    hallway(L),
+    member(H, L),
+    not(member(H, [ha,hb,hc,hd])).
+
 % Never stop on the space immediately outside a room i.e. any of [ha,hb,hc,hd], keep going.
-legal_path_end(E) :-
-    not(member(E, [ha, hb, hc, hd])).
+legal_path_end(S, F) :-
+    home_for(_, L1),
+    member(S, L1),
+    !,
+    in_hallway(F).
+legal_path_end(S, F) :-
+    in_hallway(S),
+    !,
+    home_for(_, L2),
+    member(F, L2).
+
+% legal_path_rec(State, A, B, Path).
+legal_path_rec(_, A, A, [A]) :- nonvar(A).
+legal_path_rec(State, A, B, [B | Tail]) :-
+    nonvar(A),
+    nonvar(B),
+    legal_path_rec(State, A, OneButLast, Tail),
+    bconn(OneButLast, B),
+    not(member(B, State)),      % Cannot visit occupied space.
+    not(member(B, Tail)).       % No cycles in the path.
 
 % Locations in a path must be connected and empty in the current state.
-legal_path(_, [E]) :-
-    legal_path_end(E).
-legal_path(State, [A, B | Tail]) :-
-    bconn(A, B),
-    not(member(B, State)),
-    legal_path(State, [B | Tail]).
+legal_path(State, A, B, Path) :-
+    member(A, State),
+    legal_path_end(A, B),
+    legal_path_rec(State, A, B, Path).
 
 % Types and step costs of respective amphipods in the state vector.
 cost_lookup([a/1, a/1, b/10, b/10, c/100, c/100, d/1000, d/1000]).
-
-in_hallway(H) :- 
-    hallway(L),
-    member(H, L).
-% Remove any instances of a value from a list.
-remove_all(_, [], []).
-remove_all(V, [V | Tail], TailAfter) :-
-	!,
-	remove_all(V, Tail, TailAfter).
-remove_all(V, [H | Tail], [H | TailAfter]) :-
-	remove_all(V, Tail, TailAfter).
-
-% Map list elements from one list through a named function(X,Y), producing a second list.
-my_map_list([], _, []).
-my_map_list([X | InTail], Function, [Y | OutTail]) :-
-	Goal =.. [Function, X, Y],
-	Goal,
-	my_map_list(InTail, Function, OutTail).
 
 % Zip the corresponding elements from two lists together.
 zip_lists([], [], []).
@@ -160,12 +162,11 @@ legal_move_type(_, _, Finish, _) :-                 % Move out to the hallway.
     in_hallway(Finish).
 
 move(Before, Path, After, Cost) :-
-    % Is path legal?
-    conc([Start | _], [Finish], Path),
-    index_of(Start, Before, Index),
-    legal_path(Before, Path),
-    % Check type of move.
     cost_lookup(L),
+    % Is path legal?
+    index_of(Start, Before, Index),
+    legal_path(Before, Start, Finish, Path),
+    % Check type of move.
     get_item(Index, L, Type/StepCost),
     legal_move_type(Before, Start, Finish, Type),
     % Determine state afterwards.
@@ -192,16 +193,11 @@ path(FirstNode, LastNode, [LastNode | Path]) :-
 	bconn(OneButLast, LastNode),
 	not(member(LastNode, Path)).
 
-% distance(A, B, Path, Distance)
-distance(A, B, Path, N) :-
-    path(A, B, Path),
-    !,
-    length(Path, M),
-    N is M - 1.
-
 % Simple cost of moving from A to B as a Type, ignoring any obstacles.
 path_cost(A, B, Type, Cost) :-
-    distance(A, B, _, Dist),
+    path(A, B, Path),
+    length(Path, M),
+    Dist is M - 1,
     cost_lookup(CL1),
     member(Type/StepCost, CL1),
     !,
@@ -230,6 +226,7 @@ day23_part1 :-
     write('Starting from '),
     writeln(Start),
     writeln('...'),
+    !,
     bestfirst(Start, Solution),
     writeln('Done. Solution is:'),
     writeln(Solution),

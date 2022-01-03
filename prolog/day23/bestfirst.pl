@@ -15,7 +15,7 @@
 %	Solution is a path from Start to a goal
 
 bestfirst(Start, Solution) :-
-	expand([], l(Start, 0/0), 9999, _, yes, Solution).
+	expand([], l(Start, 0/0), 9999999, _, yes, Solution).
 
 
 % expand(Path, Tree, Bound, Tree1, Solved, Solution)
@@ -104,7 +104,7 @@ f(t(_, F/_, _), F).		% f-value of a tree.
 
 bestf([T | _], F) :-
 	f(T, F).
-bestf([], 9999).		% No trees. Bad f-value.
+bestf([], 9999999).		% No trees. Bad f-value.
 
 min(X, Y, X) :- X =< Y, !.
 min(_, Y, Y).
