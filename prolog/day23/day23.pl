@@ -5,6 +5,7 @@
 :- working_directory(_, 'C:/Users/stephen.mccoy/github/aoc2021/prolog/day23/').
 
 :- dynamic connection/2.
+:- dynamic path_cost_lookup/3.
 
 % Definitions of locations in the 
 hallway([h1,h2,ha,h3,hb,h4,hc,h5,hd,h6,h7]).
@@ -59,6 +60,7 @@ bconn(B, A) :- connection(A, B).
 % Once amphipod has stopped in the hallway, it will stay there until it can move into a room.
 
 start_state([c1, d2, d1, c2, b1, b2, a1, a2]).
+test_state([h1, h2, h4, h5, h7, h3, a1, a2]).
 
 goal([A1, A2, B1, B2, C1, C2, D1, D2]) :-
     home_for(a, AL), member(A1, AL), member(A2, AL),
@@ -66,13 +68,7 @@ goal([A1, A2, B1, B2, C1, C2, D1, D2]) :-
     home_for(c, CL), member(C1, CL), member(C2, CL),
     home_for(d, DL), member(D1, DL), member(D2, DL).
 
-% Move is a sequence of locations that an amphipod can occupy, between its start in one state
-% and finish in another state.
-% 
-% move(State1, [Locations], State2, Cost).
-%
-% Locations must be linked by connections; starting location must be where an amphipod is in State1.
-
+% Generic List Stuff...
 % List concatenation.
 conc([], L, L).
 conc([H | Tail], L1, [H | L2]) :-
@@ -97,6 +93,15 @@ set_item(N, [Head | Tail], Item, [Head | Tail2]) :-
 	M is N - 1,
 	set_item(M, Tail, Item, Tail2).
 
+% Define moves.
+%
+% A move is a sequence of locations that an amphipod can occupy, between its start in one state
+% and finish in another state.
+% 
+% move(State1, [Locations], State2, Cost).
+%
+% Locations must be linked by connections; starting location must be where an amphipod is in State1.
+
 in_hallway(H) :- 
     hallway(L),
     member(H, L),
@@ -111,8 +116,15 @@ legal_path_end(S, F) :-
 legal_path_end(S, F) :-
     in_hallway(S),
     !,
-    home_for(_, L2),
-    member(F, L2).
+    home_for(_, [F, _]).
+
+% path(A, B, Path) - Path is a path (in reverse order) from location A to B, through valid connections,
+% but ignoring whether the path is open or not.
+path(Node, Node, [Node]).
+path(FirstNode, LastNode, [LastNode | Path]) :-
+	path(FirstNode, OneButLast, Path),
+	bconn(OneButLast, LastNode),
+	not(member(LastNode, Path)).
 
 % legal_path_rec(State, A, B, Path).
 legal_path_rec(_, A, A, [A]) :- nonvar(A).
@@ -124,11 +136,21 @@ legal_path_rec(State, A, B, [B | Tail]) :-
     not(member(B, State)),      % Cannot visit occupied space.
     not(member(B, Tail)).       % No cycles in the path.
 
+% Validate a candidate path (in reverse order) can be travelled.
+path_open(State, [Start]) :-
+    !,
+    member(Start, State).               % Start from an occupied location.
+path_open(State, [Head | Tail]) :-
+    not(member(Head, State)),           % No other occupied locations in path.
+    not(member(Head, Tail)),            % No cycles.
+    path_open(State, Tail).
+
 % Locations in a path must be connected and empty in the current state.
 legal_path(State, A, B, Path) :-
     member(A, State),
     legal_path_end(A, B),
-    legal_path_rec(State, A, B, Path).
+    once(path(A, B, Path)),
+    path_open(State, Path).
 
 % Types and step costs of respective amphipods in the state vector.
 cost_lookup([a/1, a/1, b/10, b/10, c/100, c/100, d/1000, d/1000]).
@@ -161,16 +183,24 @@ legal_move_type(State, Start, Finish, Type) :-     % Homing move.
 legal_move_type(_, _, Finish, _) :-                 % Move out to the hallway.
     in_hallway(Finish).
 
+% If the end of the move is to a home location, move in deeper if possible.
+adjust_finish(State, Fin1, Fin2, Path, [Fin2 | Path]) :-
+    home_for(_, [Fin1, Fin2]),
+    not(member(Fin2, State)),
+    !.
+adjust_finish(_, Fin1, Fin1, Path, Path).
+
 move(Before, Path, After, Cost) :-
     cost_lookup(L),
-    % Is path legal?
+    % Find legal path.
     index_of(Start, Before, Index),
-    legal_path(Before, Start, Finish, Path),
+    legal_path(Before, Start, Fin1, P1),
     % Check type of move.
-    get_item(Index, L, Type/StepCost),
-    legal_move_type(Before, Start, Finish, Type),
+    once(get_item(Index, L, Type/StepCost)),
+    legal_move_type(Before, Start, Fin1, Type),
+    adjust_finish(Before, Fin1, Fin2, P1, Path),
     % Determine state afterwards.
-    set_item(Index, Before, Finish, After),
+    set_item(Index, Before, Fin2, After),
     % Find cost of move
     length(Path, PathLen),
     NumSteps is PathLen - 1,
@@ -187,31 +217,42 @@ s(N, M, C) :-
 % (Admissible) heuristic function h(n) should be cost of restoring each amphipod to its home,
 % ignoring obstacles.
 
-path(Node, Node, [Node]).
-path(FirstNode, LastNode, [LastNode | Path]) :-
-	path(FirstNode, OneButLast, Path),
-	bconn(OneButLast, LastNode),
-	not(member(LastNode, Path)).
+add_lookup_costs([]).
+add_lookup_costs([S/D/C | Tail]) :-
+    assertz(path_cost_lookup(S, D, C)),
+    add_lookup_costs(Tail).
+
+create_path_cost_lookup :-
+    retractall(path_cost_lookup(_, _, _)),
+    cost_lookup(CL1),
+    findall(X/T, (home_for(T, XL), member(X, XL)), XL1),
+    findall(Y, (in_hallway(Y); member(Y/_, XL1)), YL1),
+    findall(S/D/Cost, (
+        member(S, YL1),
+        member(D/T, XL1),
+        once(path(S, D, P1)),
+        length(P1, M),
+        Dist is M - 1,
+        once(member(T/StepCost, CL1)),
+        Cost is Dist * StepCost
+    ), List),
+    add_lookup_costs(List).
+
+:- create_path_cost_lookup.
 
 % Simple cost of moving from A to B as a Type, ignoring any obstacles.
-path_cost(A, B, Type, Cost) :-
-    path(A, B, Path),
-    length(Path, M),
-    Dist is M - 1,
-    cost_lookup(CL1),
-    member(Type/StepCost, CL1),
-    !,
-    Cost is Dist * StepCost.
+path_cost(A, B, Cost) :-
+    path_cost_lookup(A, B, Cost).
 
 h([A1loc, A2loc, B1loc, B2loc, C1loc, C2loc, D1loc, D2loc], Cost) :-
-    path_cost(A1loc, a1, a, A1Cost),
-    path_cost(A2loc, a1, a, A2Cost),
-    path_cost(B1loc, b1, b, B1Cost),
-    path_cost(B2loc, b1, b, B2Cost),
-    path_cost(C1loc, c1, c, C1Cost),
-    path_cost(C2loc, c1, c, C2Cost),
-    path_cost(D1loc, d1, d, D1Cost),
-    path_cost(D2loc, d1, d, D2Cost),
+    path_cost(A1loc, a1, A1Cost),
+    path_cost(A2loc, a1, A2Cost),
+    path_cost(B1loc, b1, B1Cost),
+    path_cost(B2loc, b1, B2Cost),
+    path_cost(C1loc, c1, C1Cost),
+    path_cost(C2loc, c1, C2Cost),
+    path_cost(D1loc, d1, D1Cost),
+    path_cost(D2loc, d1, D2Cost),
     Cost is A1Cost + A2Cost + B1Cost + B2Cost + C1Cost + C2Cost + D1Cost + D2Cost.
 
 solution_cost([_], 0) :- !.
