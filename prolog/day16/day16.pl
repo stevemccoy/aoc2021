@@ -26,7 +26,7 @@ packet(Ver, 4, Value, [], BitsConsumed) -->
 
 packet(Ver, Type, Value, SubPackets, BitsConsumed) -->
 	operator_packet(Ver, Type, SubPackets, BitsConsumed),
-	{	Type \= 4,
+	{	Type \== 4,
 		make_packet(Ver, Type, Value, SubPackets, P),
 		assertz(op_packet(P))
 	}.
