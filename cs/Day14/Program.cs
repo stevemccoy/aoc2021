@@ -31,6 +31,7 @@ namespace Day14
         static void Main(string[] args)
         {
             Console.WriteLine("Advent of Code 2021.\nDay 14, Part 1");
+
             Console.WriteLine("Test:");
             ReadInputFile("test14.txt");
             for (int i = 0; i < 5; i++) {
@@ -48,6 +49,8 @@ namespace Day14
             Console.WriteLine($"Difference = {maxValue - minValue}");
 
             Console.WriteLine("Part 2.");
+            Part2Again();
+/*            
             Part2();
             stats = RunningStats.OrderBy(p => p.Value);
             minValue = stats.First().Value;
@@ -55,16 +58,17 @@ namespace Day14
             Console.WriteLine($"Most common: {stats.Last().Key} : {maxValue}");
             Console.WriteLine($"Least common: {stats.First().Key} : {minValue}");
             Console.WriteLine($"Difference = {maxValue - minValue}");
+*/            
         }
 
         static void Part2() {
             ReadInputFile("input14.txt");
             SetupStatistics();
             Work.Push(new Polymer(0, Strand));
-            ProcessDay2Work(40);
+            ProcessDay2Work_WrongWay(40);
         }
 
-        private static void ProcessDay2Work(int numSteps)
+        private static void ProcessDay2Work_WrongWay(int numSteps)
         {
             Polymer p;
             char? previousChar = null;
@@ -173,6 +177,76 @@ namespace Day14
                 }
             }
             return result;
+        }
+
+        static Dictionary<string, Int64> DoubleCounts = new Dictionary<string, long>();
+
+        static Dictionary<string, Int64> Frequencies = new Dictionary<string, long>();
+
+        static void Part2Again() {
+            Console.WriteLine("Part 2. Reading input file.");
+            ReadInputFile("input14.txt");
+            Console.WriteLine("Setting up initial counts.");
+            SetupCounts();
+            Console.WriteLine("Stepping through 40 cycles of reaction.");
+            for (int step = 0; step < 40; step++) {
+                DoStepPart2Frequencies();
+            }
+            Console.WriteLine("Done.\nCalculating Statistics.");
+            Part2Stats();
+        }
+
+        static void IncrementCount<KT>(Dictionary<KT, Int64> d, KT k, Int64 amount = 1)
+        {
+            if (d.ContainsKey(k)) {
+                d[k] += amount;
+            }
+            else {
+                d[k] = amount;
+            }
+        }
+
+        static void SetupCounts() {
+            for (int i = 0; i < Strand.Length - 1; i++) {
+                var pair = Strand.Substring(i, 2);
+                IncrementCount(Frequencies, pair, 1);
+                IncrementCount(DoubleCounts, pair.Substring(0, 1), 1);
+            }
+            DoubleCounts[Strand.Substring(0, 1)]--;
+        }
+
+        static void DoStepPart2Frequencies() {
+            Dictionary<string, Int64> dest = new Dictionary<string, long>();
+            foreach (var reactant in Frequencies) {
+                if (Rules.ContainsKey(reactant.Key)) {
+                    var product = Rules[reactant.Key];
+                    var pair1 = reactant.Key[0] + product;
+                    var pair2 = product + reactant.Key[1];
+                    IncrementCount(dest, pair1, reactant.Value);
+                    IncrementCount(dest, pair2, reactant.Value);
+                    IncrementCount(DoubleCounts, product, reactant.Value);
+                }
+                else {
+                    dest[reactant.Key] = reactant.Value;
+                }
+            }
+            Frequencies = dest;
+        }
+
+        static void Part2Stats() {
+            Dictionary<char, Int64> elementCounts = new Dictionary<char, long>();
+            foreach (var pair in Frequencies) {
+                IncrementCount(elementCounts, pair.Key[0], pair.Value);
+                IncrementCount(elementCounts, pair.Key[1], pair.Value);
+            }
+            foreach (var pair in DoubleCounts) {
+                elementCounts[pair.Key[0]] -= DoubleCounts[pair.Key];
+            }
+            var sorted = elementCounts.AsEnumerable().OrderByDescending(p => p.Value);
+            Console.WriteLine($"Most common element is {sorted.First().Key} with count {sorted.First().Value}");
+            Console.WriteLine($"Least common element is {sorted.Last().Key} with count {sorted.Last().Value}");
+            var difference = sorted.First().Value - sorted.Last().Value;
+            Console.WriteLine($"Difference is : {difference}");            
         }
     }
 }
