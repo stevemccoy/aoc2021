@@ -346,3 +346,43 @@
     )
   )
 
+; Convert the square brackets and commas version of line to a seq.
+(defn convert-line [line]
+  (-> line
+      (str/replace "[" "(")
+      (str/replace "]" ")")
+      (str/replace "," " ")
+      (read-string)
+      ))
+
+; tree is a seq of binary tree (2 element seq or number)
+; path is a list of 0/1 elements, going from root to leaf.
+(defn btree-select [tree path]
+  (if (> (length path) 0)
+    (if (= (first path) 0)
+      (btree-select (first tree) (rest path))
+      (btree-select (second tree) (rest path))
+      )
+    tree
+    )
+  )
+
+(walk-tree [tree ])
+
+; Return (result t/nil) according to whether anything changed or not.
+(defn explode [snail-fish]
+
+  )
+
+(defn add-and-reduce-snailfish [a b]
+  (-> (cons (quote a) (quote (b)))
+      (reduce-snailfish)
+      )
+  )
+
+(defn day18-part1 []
+  (with-open [rdr (io/reader "input/day18.txt")]
+    (->> (line-seq rdr)
+         (map convert-line)
+         (reduce add-and-reduce-snailfish)
+         )))
