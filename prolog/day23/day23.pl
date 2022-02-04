@@ -103,9 +103,7 @@ set_item(N, [Head | Tail], Item, [Head | Tail2]) :-
 % Locations must be linked by connections; starting location must be where an amphipod is in State1.
 
 in_hallway(H) :- 
-    hallway(L),
-    member(H, L),
-    not(member(H, [ha,hb,hc,hd])).
+    member(H, [h1,h2,h3,h4,h5,h6,h7]).
 
 % Never stop on the space immediately outside a room i.e. any of [ha,hb,hc,hd], keep going.
 legal_path_end(S, F) :-
@@ -175,7 +173,7 @@ no_strangers_home(State, Type) :-
 % Find out if the move is legal for the type of amphipod concerned.
 % Never move from hallway into a room unless it is its home and contains no different amphipods.
 legal_move_type(State, Start, Finish, Type) :-     % Homing move.
-    in_hallway(Start), 
+    in_hallway(Start),
     !,
     home_for(Type, HL),
     member(Finish, HL),
