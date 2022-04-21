@@ -7,6 +7,33 @@
 
 :- dynamic field/1.
 :- dynamic goal/1.
+:- dynamic hfactor/1.
+
+% Delete an item from a list.
+del(Item, [Item | List], List).
+del(Item, [First | List1], [First | List2]) :-
+	del(Item, List1, List2).
+
+% List concatenation.
+conc([], L, L).
+conc([H | Tail], L1, [H | L2]) :-
+	conc(Tail, L1, L2).
+
+% Remove any instances of a value from a list.
+remove_all(_, [], []).
+remove_all(V, [V | Tail], TailAfter) :-
+	!,
+	remove_all(V, Tail, TailAfter).
+remove_all(V, [H | Tail], [H | TailAfter]) :-
+	remove_all(V, Tail, TailAfter).
+
+% difference(Super, Sub, Diff) - Diff is the set of elements of Super which are
+% not in Sub.
+difference(S, [], S).
+difference(Set, [H | T], Diff) :-
+	remove_all(H, Set, D1),
+	difference(D1, T, Diff).
+
 
 store_field_row([]).
 store_field_row([X | Tail]) :-
@@ -63,6 +90,12 @@ path(Start, Finish, [Finish | Path], GPath) :-
 	GPath is GTail + G.
 
 
+% DFID method for search.
+depth_first_iterative_deepening(Node, Solution, Cost) :-
+	path(Node, GoalNode, Solution, Cost),
+	goal(GoalNode).
+
+
 % Best first graph search representation:
 % State consists of the path (in reverse order) so far and its total cost.
 % Goal is bottom right of grid.
@@ -91,7 +124,9 @@ h(R/C/_, H) :-
 	goal(GR/GC/_),
 	DR is GR - R,
 	DC is GC - C,
-	H is sqrt(DR * DR + DC * DC).
+%	hfactor(Mean),
+	Mean = 1,
+	H is Mean * (DR + DC).
 
 setup_goal :-
 	retractall(goal(_)),
@@ -110,10 +145,50 @@ path_cost([_/_/G | T], Cost) :-
 solve_for(FileName, Path, Cost) :-
 	read_input_data(FileName),
 	setup_goal,
+	retractall(hfactor(_)),
+	field_stats(_, _, Mean),
+	assertz(hfactor(Mean)),
 	field(1/1/G1),
+%	depth_first_iterative_deepening(1/1/G1, Path, Cost),
 	bestfirst(1/1/G1, Path),
 	path_cost(Path, Cost),
 	format('Solution is ~w\nwith cost ~w\n', [Path, Cost]).
+
+field_stats(Total, Count, Mean) :-
+	findall(G, field(_/_/G), GL),
+	sum_list(GL, Total),
+	length(GL, Count),
+	Mean is (Total + 0.0) / Count.
+
+find_minima(Minima) :-
+	findall(R/C/G1, (
+		not((conn(_/_/G2, R/C/G1), G2 < G1))
+	), Minima).
+%	findall(R/C/1, field(R/C/1), Minima).
+%	member(M1, Minima),
+%	member(M2, Minima),
+
+
+grow_group(Source, Group, NewSource, NewGroup) :-
+	findall(M1, (
+		member(M2, Group),
+		conn(M2, M1),
+		member(M1, Source),
+		not(member(M1, Group))
+	), ML1),
+	member(_, ML1),
+	!,
+	conc(ML1, Group, NG1),
+	difference(Source, ML1, NS1),
+	grow_group(NS1, NG1, NewSource, NewGroup).
+grow_group(S, G, S, G).
+
+
+% groups(Items, Groups) :-
+groups([], []).
+groups([Item | Rest], [Group | OtherGroups]) :-
+	grow_group(Rest, [Item], NewRest, Group),
+	groups(NewRest, OtherGroups).
 
 
 pixel(R, C, '#') :-	field(R/C/G), G > 5, !.
