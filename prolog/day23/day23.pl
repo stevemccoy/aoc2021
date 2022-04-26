@@ -2,7 +2,7 @@
 % Advent of Code 2021 - Day 23 - Amphipods
 %
 
-:- working_directory(_, 'C:/Users/stephen.mccoy/github/aoc2021/prolog/day23/').
+:- working_directory(_, 'C:/Users/steve/github/aoc2021/prolog/day23/').
 
 :- dynamic connection/2.
 :- dynamic path_cost_lookup/3.
@@ -240,18 +240,26 @@ create_path_cost_lookup :-
 
 % Simple cost of moving from A to B as a Type, ignoring any obstacles.
 path_cost(A, B, Cost) :-
+    AllLocations = [h1,h2,ha,h3,hb,h4,hc,h5,hd,h6,h7,a1,a2,b1,b2,c1,c2,d1,d2],
+    member(A, AllLocations),
+    member(B, AllLocations),
     path_cost_lookup(A, B, Cost).
 
+block_path_cost([Loc1,Loc2], [Dest1,Dest2], Cost) :-
+    path_cost(Loc1, Dest1, C1),
+    path_cost(Loc2, Dest2, C2),
+    Cost1 is C1 + C2,
+    path_cost(Loc1, Dest2, C3),
+    path_cost(Loc2, Dest1, C4),
+    Cost2 is C3 + C4,
+    min_list([Cost1, Cost2], Cost). 
+
 h([A1loc, A2loc, B1loc, B2loc, C1loc, C2loc, D1loc, D2loc], Cost) :-
-    path_cost(A1loc, a1, A1Cost),
-    path_cost(A2loc, a1, A2Cost),
-    path_cost(B1loc, b1, B1Cost),
-    path_cost(B2loc, b1, B2Cost),
-    path_cost(C1loc, c1, C1Cost),
-    path_cost(C2loc, c1, C2Cost),
-    path_cost(D1loc, d1, D1Cost),
-    path_cost(D2loc, d1, D2Cost),
-    Cost is A1Cost + A2Cost + B1Cost + B2Cost + C1Cost + C2Cost + D1Cost + D2Cost.
+    block_path_cost([A1loc,A2loc], [a1,a2], ACost),
+    block_path_cost([B1loc,B2loc], [b1,b2], BCost),
+    block_path_cost([C1loc,C2loc], [c1,c2], CCost),
+    block_path_cost([D1loc,D2loc], [d1,d2], DCost),
+    Cost is ACost + BCost + CCost + DCost.
 
 solution_cost([_], 0) :- !.
 solution_cost([A, B | Tail], Cost) :-
