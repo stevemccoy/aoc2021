@@ -14,3 +14,6 @@ pom.xml.asc
 .cpcache/
 [Oo]bj/
 [Bb]in/
+[Dd]ebug/
+[Rr]elease/
+.vs/
