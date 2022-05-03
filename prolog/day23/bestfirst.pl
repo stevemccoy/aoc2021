@@ -10,6 +10,7 @@
 %	of best solution path from start node s to a goal node, passing through node n on the way.
 % * f(n) = g(n) + h(n)
 
+:- dynamic goal/1.
 
 % bestfirst(Start, Solution)
 %	Solution is a path from Start to a goal
