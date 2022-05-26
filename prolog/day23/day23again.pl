@@ -72,7 +72,7 @@ move_cost(Type, Path, Cost) :-
 % Move to get an amphipod home.
 
 % deep_homing_move(Before, Path, After) :-
-move(Before, Path, After, Cost) :-
+move(Before, move(Type, From, Home), Path, After, Cost) :-
 	member(Type/Home, [a/a1, b/b1, c/c1, d/d1]),
 	not(member(_/Home, Before)),
 	del(Type/From, Before, Inter1),
@@ -82,7 +82,7 @@ move(Before, Path, After, Cost) :-
 	move_cost(Type, Path, Cost).
 
 % shallow_homing_move(Before, Path, After) :-
-move(Before, Path, After, Cost) :-
+move(Before, move(Type, From, Home2), Path, After, Cost) :-
 	member(Type/Home2/Home1, [a/a2/a1, b/b2/b1, c/c2/c1, d/d2/d1]),
 	member(Type/Home1, Before),			% Must have solved deep home problem first,
 	not(member(_/Home2, Before)),		% and shallow one is empty.
@@ -94,7 +94,7 @@ move(Before, Path, After, Cost) :-
 	move_cost(Type, Path, Cost).
 
 % hallway_move1(Before, Path, After) :-
-move(Before, Path, After, Cost) :-
+move(Before, move(Type, From, To), Path, After, Cost) :-
 	member(Type/Home2/Home1, [a/a2/a1, b/b2/b1, c/c2/c1, d/d2/d1]),
 	del(Type/From, Before, Inter1),
 	not(in_hallway(From)),
@@ -106,7 +106,7 @@ move(Before, Path, After, Cost) :-
 	move_cost(Type, Path, Cost).
 
 % hallway_move2(Before, Path, After) :-
-move(Before, Path, After, Cost) :-
+move(Before, move(Type, Home2, Dest), Path, After, Cost) :-
 	member(Type/Home2/Home1, [a/a2/a1, b/b2/b1, c/c2/c1, d/d2/d1]),
 	del(Type/Home2, Before, Inter1),
 	not(member(Type/Home1, Before)),		% Deep home not solved yet.
@@ -116,17 +116,110 @@ move(Before, Path, After, Cost) :-
 	del(Type/Dest, After, Inter1),
 	move_cost(Type, Path, Cost).
 
+
+% Planning operator(s).
+
+can(State, move(Type, From, To), [Type/From]) :-
+	member(Type, [a, b, c, d]),
+	From \== To,
+	move(State, move(Type, From, To), _, _, _).
+
+add(move(Type, _, To), [Type/To]).
+del(move(Type, From, _), [Type/From]).
+
+
+% Means-end planner (from Bratko, 2nd Ed):
+
+% plan(InitialState, Goals, Plan): Means end planner with goal regression.
+plan(State, Goals, []) :-
+	satisfied(State, Goals).
+
+plan(State, Goals, Plan) :-
+	writeln(Goals),
+	conc(PrePlan, [Action], Plan),					% Divide plan achieving breadth-first effect.
+	select(State, Goals, Goal),
+	achieves(Action, Goal),
+	can(State, Action, _),							% Ensure Action contains no variables. (?)
+	preserves(Action, Goals),						% Protect Goals.
+	regress(State, Goals, Action, RegressedGoals),	% Regress Goals through Action.
+	plan(State, RegressedGoals, PrePlan).
+
+
+
+% satisfied(State, Goals): Goals are satisfied in State.
+satisfied(State, Goals) :- 
+	delete(Goals, State, []).						% All Goals are in State.
+
+
+select(_, Goals, Goal) :-
+	member(Goal, Goals).
+
+
+% achieves(Action, Goal): Goal is in the add-list of Action.
+achieves(Action, Goal) :-
+	add(Action, Goals),
+	member(Goal, Goals).
+
+% preserves(Action, Goal): Action does not destroy any one of the Goals.
+preserves(Action, Goals) :-
+	del(Action, Relations),
+	not((member(Goal, Relations),
+		member(Goal, Goals))).
+
+
+regress(State, Goals, Action, RegressedGoals) :-
+	add(Action, NewRelations),
+	delete(Goals, NewRelations, RestGoals),
+	can(State, Action, Condition),
+	addnew(Condition, RestGoals, RegressedGoals).	% Add precondition, check impossible.
+
+
+% addnew(NewGoals, OldGoals, AllGoals): AllGoals is the union of NewGoals and OldGoals, which must be compatible.
+addnew([], L, L).
+addnew([Goal | _], Goals, _) :-
+	impossible(Goal, Goals),						% Goal incompatible with Goals.
+	!,
+	fail.
+addnew([X | L1], L2, L3) :-
+	member(X, L2), !,								% Ignore duplicate.
+	addnew(L1, L2, L3).
+addnew([X | L1], L2, [X | L3]) :-
+	addnew(L1, L2, L3).
+
+
+% impossible(Goal, Goals): Goal is incompatible with one or more of Goals.
+impossible(Type/To, Goals) :-
+	member(T2/To, Goals), T2 \== Type.				% Destination cannot be occupied twice.
+
+
+% apply(State, Action, NewState): Action executed in State produces NewState.
+apply(State, Action, NewState) :-
+	del(Action, DelList),
+	delete(State, DelList, State1), !, 
+	add(Action, AddList),
+	conc(AddList, State1, NewState).
+
+
+% delete(L1, L2, Diff): Diff is set-difference of lists L1 and L2.
+delete([], _, []).
+delete([X | L1], L2, Diff) :-
+	member(X, L2), !,
+	delete(L1, L2, Diff).
+delete([X | L1], L2, [X | Diff]) :-
+	delete(L1, L2, Diff).
+
+
 % Successor of N is M with a cost of M:
-s(N, M, C) :- move(N, _, M, C).
+s(N, M, C) :- move(N, _, _, M, C).
 
 % Heuristic function.
 h(_, 0).
 
 start_state(	[a/c1, a/d2, b/d1, b/c2, c/b1, c/b2, d/a1, d/a2]).
-goal_state(		[a/a1, a/a2, b/b1, b/b2, c/c1, c/c2, d/d1, d/d2]).
+goal_state(		[d/d1, d/d2, c/c1, c/c2, b/b1, b/b2, a/a1, a/a2]).
 
 goal(State) :-
-	goal_state(Goal)
+	goal_state(Goal),
 	permutation(State, Goal).
 
 solution_cost([_], 0) :- !.
@@ -142,7 +235,7 @@ day23_part1 :-
     writeln(Start),
     writeln('...'),
     !,
-    bestfirst(Start, Solution),
+%    bestfirst(Start, Solution),
     writeln('Done. Solution is:'),
     writeln(Solution),
     solution_cost(Solution, MinCost),

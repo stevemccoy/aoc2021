@@ -178,7 +178,9 @@ legal_move_type(State, Start, Finish, Type) :-     % Homing move.
     home_for(Type, HL),
     member(Finish, HL),
     no_strangers_home(State, Type).
-legal_move_type(_, _, Finish, _) :-                 % Move out to the hallway.
+legal_move_type(_, Start, Finish, Type) :-                  % Move out to the hallway.
+    home_for(Type, HL),
+    not(member(Start, HL)),
     in_hallway(Finish).
 
 % If the end of the move is to a home location, move in deeper if possible.
@@ -233,7 +235,7 @@ create_path_cost_lookup :-
         Dist is M - 1,
         once(member(T/StepCost, CL1)),
         % Try heuristic just costing by the distance.
-        Cost is Dist % * StepCost
+        Cost is Dist * StepCost
     ), List),
     add_lookup_costs(List).
 
@@ -264,6 +266,7 @@ h([A1loc, A2loc, B1loc, B2loc, C1loc, C2loc, D1loc, D2loc], Cost) :-
     Cost is ACost + BCost + CCost + DCost.
 */
 h(_, 0).
+
 
 solution_cost([_], 0) :- !.
 solution_cost([A, B | Tail], Cost) :-
